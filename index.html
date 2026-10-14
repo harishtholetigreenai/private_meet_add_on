@@ -343,7 +343,7 @@
       if (!sidePanelClient) return;
       try {
         await sidePanelClient.startActivity({
-          mainStageUrl: window.location.href
+          sidePanelUrl: window.location.href
         });
       } catch (err) {
         console.error("Failed to start activity across call:", err);
