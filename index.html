@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus Legal  for Google Meet™</title>
+  
+  <!-- Google Meet Add-on SDK -->
+  <script src="https://www.gstatic.com/meetjs/addons/1.1.0/meet.addons.js"></script>
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(145deg, #0b0f19 0%, #111827 100%);
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --text-main: #f8fafc;
+      --text-dim: #94a3b8;
+      --border: rgba(255, 255, 255, 0.08);
+      --bubble-user: #0284c7;
+      --bubble-bot: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 4px 10px 4px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-icon {
+      width: 24px;
+      height: 24px;
+      background: var(--accent);
+      color: #0b0f19;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    h1 {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+
+    #sdk-status {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Collaboration / Broadcast Action Banner */
+    .broadcast-card {
+      margin-top: 10px;
+      background: rgba(228, 86, 25, 0.05);
+      border: 1px solid rgba(100, 220, 9, 0.2);
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .broadcast-card p {
+      font-size: 11px;
+      color: var(--text-dim);
+      line-height: 1.3;
+    }
+
+    .btn-broadcast {
+      background: var(--accent);
+      color: #0b0f19;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    .btn-broadcast:hover:not(:disabled) {
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn-broadcast:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Main Chat Stream */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      margin: 10px 0;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface-light) transparent;
+    }
+
+    .chat-container::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-container::-webkit-scrollbar-thumb {
+      background: var(--surface-light);
+      border-radius: 4px;
+    }
+
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      max-width: 86%;
+    }
+
+    .msg-row.user {
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+
+    .msg-row.bot {
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .sender-name {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-bottom: 3px;
+      padding: 0 2px;
+    }
+
+    .msg-bubble {
+      padding: 9px 13px;
+      font-size: 12.5px;
+      line-height: 1.45;
+      border-radius: 12px;
+      word-wrap: break-word;
+    }
+
+    .msg-row.user .msg-bubble {
+      background: var(--bubble-user);
+      color: #ffffff;
+      border-bottom-right-radius: 2px;
+    }
+
+    .msg-row.bot .msg-bubble {
+      background: var(--bubble-bot);
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 2px;
+    }
+
+    /* Notice Pill Inside Bot Message */
+    .backend-alert {
+      display: inline-block;
+      margin-top: 4px;
+      font-size: 10.5px;
+      color: #fca5a5;
+      font-weight: 500;
+    }
+
+    /* Chat Input Bar */
+    form {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 4px 6px 4px 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    form:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-main);
+      font-size: 12.5px;
+    }
+
+    input[type="text"]::placeholder {
+      color: var(--text-dim);
+    }
+
+    .btn-submit {
+      background: var(--accent);
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-submit:hover {
+      transform: scale(1.05);
+    }
+
+    .btn-submit svg {
+      width: 15px;
+      height: 15px;
+      fill: #0b0f19;
+    }
+
+    /* Legal Trademark Footer (Google Compliance) */
+    footer {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-dim);
+      padding-top: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="brand">
+      <div class="badge-icon">§</div>
+      <h1>Nexus Legal </h1>
+    </div>
+    <span id="sdk-status">Standalone</span>
+  </header>
+
+  <!-- Notify & Invite Participants Banner -->
+  <div class="broadcast-card">
+    <p>Invite court participants to sync with this assistant panel.</p>
+    <button id="btn-broadcast" class="btn-broadcast" disabled>Invite Call</button>
+  </div>
+
+  <!-- Messages Stream -->
+  <div id="chat-stream" class="chat-container">
+    <div class="msg-row bot">
+      <span class="sender-name">Nexus </span>
+      <div class="msg-bubble">
+        Hello Counsel. Ready for moot court deliberation. Type your inquiry or legal question below.
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <form id="query-form">
+    <input id="user-input" type="text" placeholder="Ask legal question or cite rule..." autocomplete="off" required />
+    <button type="submit" class="btn-submit" aria-label="Send">
+      <svg viewBox="0 0 24 24">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </svg>
+    </button>
+  </form>
+
+  <footer>
+    Google Meet™ is a trademark of Google LLC.
+  </footer>
+
+  <script>
+    // Numeric Google Cloud Project Number from your Cloud Console
+    const CLOUD_PROJECT_NUMBER = "652961646694";
+
+    let sidePanelClient = null;
+
+    // Initialize Meet SDK
+    async function initMeetSDK() {
+      const statusBadge = document.getElementById("sdk-status");
+      const broadcastBtn = document.getElementById("btn-broadcast");
+
+      try {
+        if (!window.meet || !window.meet.addon) {
+          throw new Error("Meet Add-on SDK not found. Running in browser view.");
+        }
+
+        const session = await window.meet.addon.createAddonSession({
+          cloudProjectNumber: CLOUD_PROJECT_NUMBER
+        });
+
+        sidePanelClient = await session.createSidePanelClient();
+
+        statusBadge.textContent = "Meet Connected";
+        statusBadge.style.color = "#4ade80";
+        statusBadge.style.borderColor = "rgba(74, 222, 128, 0.4)";
+        broadcastBtn.disabled = false;
+
+      } catch (err) {
+        console.warn("SDK Status:", err.message);
+        statusBadge.textContent = "Offline Preview";
+      }
+    }
+
+    // Trigger Google Meet's native "Join / Install" prompt to everyone in call
+    document.getElementById("btn-broadcast").addEventListener("click", async () => {
+      if (!sidePanelClient) return;
+      try {
+        await sidePanelClient.startActivity({
+          mainStageUrl: window.location.href
+        });
+      } catch (err) {
+        console.error("Failed to start activity across call:", err);
+      }
+    });
+
+    // Chat Interface Logic
+    const chatStream = document.getElementById("chat-stream");
+    const queryForm = document.getElementById("query-form");
+    const userInput = document.getElementById("user-input");
+
+    function renderMessage(sender, text, isBot = false, isBackendNotice = false) {
+      const row = document.createElement("div");
+      row.className = `msg-row ${isBot ? 'bot' : 'user'}`;
+
+      const name = document.createElement("span");
+      name.className = "sender-name";
+      name.textContent = sender;
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = text;
+
+      if (isBackendNotice) {
+        const notice = document.createElement("div");
+        notice.className = "backend-alert";
+        notice.textContent = "⚡ Note: No backend service connected yet. Ready for Nexus API endpoint.";
+        bubble.appendChild(document.createElement("br"));
+        bubble.appendChild(notice);
+      }
+
+      row.appendChild(name);
+      row.appendChild(bubble);
+      chatStream.appendChild(row);
+      chatStream.scrollTop = chatStream.scrollHeight;
+    }
+
+    queryForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const query = userInput.value.trim();
+      if (!query) return;
+
+      renderMessage("Counsel", query, false);
+      userInput.value = "";
+
+      // Default mock response indicating backend integration is next
+      setTimeout(() => {
+        renderMessage(
+          "Nexus Copilot",
+          `Received query: "${query}".`,
+          true,
+          true
+        );
+      }, 400);
+    });
+
+    window.addEventListener("DOMContentLoaded", initMeetSDK);
+  </script>
+</body>
+</html>
