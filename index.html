@@ -310,6 +310,7 @@
     const CLOUD_PROJECT_NUMBER = "652961646694";
 
     let sidePanelClient = null;
+    let activeFrameType = null;
 
     // Initialize Meet SDK
     async function initMeetSDK() {
@@ -321,32 +322,45 @@
           throw new Error("Meet Add-on SDK not found. Running in browser view.");
         }
 
+        activeFrameType = window.meet.addon.getFrameType();
+
         const session = await window.meet.addon.createAddonSession({
           cloudProjectNumber: CLOUD_PROJECT_NUMBER
         });
 
-        sidePanelClient = await session.createSidePanelClient();
+        // Meet loads this same page in either the side panel or main stage.
+        // Create the client that matches the frame or the SDK rejects the call.
+        if (activeFrameType === "MAIN_STAGE") {
+          await session.createMainStageClient();
+          document.querySelector(".broadcast-card").style.display = "none";
+        } else {
+          sidePanelClient = await session.createSidePanelClient();
+          broadcastBtn.disabled = false;
+        }
 
         statusBadge.textContent = "Meet Connected";
         statusBadge.style.color = "#4ade80";
         statusBadge.style.borderColor = "rgba(74, 222, 128, 0.4)";
-        broadcastBtn.disabled = false;
 
       } catch (err) {
-        console.warn("SDK Status:", err.message);
-        statusBadge.textContent = "Offline Preview";
+        console.error("Meet add-on initialization failed:", err);
+        statusBadge.textContent = "SDK Error";
+        statusBadge.title = err && err.message ? err.message : String(err);
+        broadcastBtn.disabled = true;
       }
     }
 
     // Trigger Google Meet's native "Join / Install" prompt to everyone in call
     document.getElementById("btn-broadcast").addEventListener("click", async () => {
-      if (!sidePanelClient) return;
+      if (!sidePanelClient || activeFrameType !== "SIDE_PANEL") return;
       try {
         await sidePanelClient.startActivity({
-          sidePanelUrl: window.location.href
+          sidePanelUrl: "https://harishtholetigreenai.github.io/private_meet_add_on/"
         });
       } catch (err) {
         console.error("Failed to start activity across call:", err);
+        document.getElementById("sdk-status").textContent = "Activity Error";
+        document.getElementById("sdk-status").title = err && err.message ? err.message : String(err);
       }
     });
 
