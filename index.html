@@ -263,6 +263,19 @@
       color: var(--text-dim);
       padding-top: 8px;
     }
+
+    #sdk-diagnostic {
+      display: none;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(248, 113, 113, 0.45);
+      border-radius: 8px;
+      background: rgba(127, 29, 29, 0.22);
+      color: #fecaca;
+      font-size: 11px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
   </style>
 </head>
 
@@ -274,6 +287,8 @@
     </div>
     <span id="sdk-status">Standalone</span>
   </header>
+
+  <div id="sdk-diagnostic" role="status" aria-live="polite"></div>
 
   <!-- Notify & Invite Participants Banner -->
   <div class="broadcast-card">
@@ -313,16 +328,36 @@
     let activeFrameType = null;
 
     // Initialize Meet SDK
+    function showDiagnostic(label, error) {
+      const statusBadge = document.getElementById("sdk-status");
+      const diagnostic = document.getElementById("sdk-diagnostic");
+      const detail = error && error.message ? error.message : String(error || "Unknown error");
+      const errorType = error && error.errorType ? ` (${error.errorType})` : "";
+
+      statusBadge.textContent = label;
+      statusBadge.style.color = "#fca5a5";
+      statusBadge.style.borderColor = "rgba(248, 113, 113, 0.55)";
+      statusBadge.title = `${detail}${errorType}`;
+      diagnostic.textContent = `${label}: ${detail}${errorType}`;
+      diagnostic.style.display = "block";
+      console.error(`[Nexus Meet Add-on] ${label}:`, error);
+    }
+
     async function initMeetSDK() {
       const statusBadge = document.getElementById("sdk-status");
       const broadcastBtn = document.getElementById("btn-broadcast");
 
       try {
+        console.info("[Nexus Meet Add-on] Initializing Meet SDK", {
+          page: `${window.location.origin}${window.location.pathname}`,
+          meetSdkAvailable: Boolean(window.meet && window.meet.addon)
+        });
         if (!window.meet || !window.meet.addon) {
           throw new Error("Meet Add-on SDK not found. Running in browser view.");
         }
 
         activeFrameType = window.meet.addon.getFrameType();
+        console.info("[Nexus Meet Add-on] Meet frame type:", activeFrameType);
 
         const session = await window.meet.addon.createAddonSession({
           cloudProjectNumber: CLOUD_PROJECT_NUMBER
@@ -343,9 +378,7 @@
         statusBadge.style.borderColor = "rgba(74, 222, 128, 0.4)";
 
       } catch (err) {
-        console.error("Meet add-on initialization failed:", err);
-        statusBadge.textContent = "SDK Error";
-        statusBadge.title = err && err.message ? err.message : String(err);
+        showDiagnostic("SDK initialization failed", err);
         broadcastBtn.disabled = true;
       }
     }
@@ -358,9 +391,7 @@
           sidePanelUrl: "https://harishtholetigreenai.github.io/private_meet_add_on/"
         });
       } catch (err) {
-        console.error("Failed to start activity across call:", err);
-        document.getElementById("sdk-status").textContent = "Activity Error";
-        document.getElementById("sdk-status").title = err && err.message ? err.message : String(err);
+        showDiagnostic("Could not start activity", err);
       }
     });
 
